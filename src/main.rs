@@ -60,6 +60,7 @@ async fn redirect_url(axum::extract::Path(short_url): axum::extract::Path<String
 }
 
 async fn post_data(Json(payload): Json<Value>) -> impl IntoResponse {
+    let mut response_key = "Data in True".to_string();
     if let Value::Object(map) = &payload {
         let url: Vec<String> = map.values()
             .filter_map(|v| v.as_str())
@@ -67,10 +68,7 @@ async fn post_data(Json(payload): Json<Value>) -> impl IntoResponse {
             .collect();
         let keys: Vec<String> = map.keys().cloned().collect();
 
-        println!("{:?}:{:?}", keys, url);
-
         if map.contains_key("long") {
-            println!("{:?}", url);
 
             let mut rng = rand::thread_rng();
             let random_code: String = (&mut rng)
@@ -121,8 +119,19 @@ async fn post_data(Json(payload): Json<Value>) -> impl IntoResponse {
                     .filter_map(|v| v.as_array())
                     .map(|arr| arr.iter().filter_map(|item| item.as_str().map(String::from)).collect())
                     .collect();
-                // 同じデータが存在すれば書き込みをスキップ
-                if values.contains(&map.values().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<String>>()) {
+                // 同じデータが存在すれば書き込みをスキップし、キーを出力
+                if let Some(existing_key) = json_map.iter().find_map(|(key, value)| {
+                    if value.as_array()
+                        .map(|arr| arr.iter().filter_map(|item| item.as_str().map(String::from)).collect::<Vec<String>>())
+                        == Some(map.values().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<String>>())
+                    {
+                        Some(key.clone())
+                    } else {
+                        None
+                    }
+                }) {
+                    response_key = existing_key.as_str().to_string();
+                    println!("{}", existing_key);
                     read_json = false;
                 }
             }
@@ -152,7 +161,7 @@ async fn post_data(Json(payload): Json<Value>) -> impl IntoResponse {
                     )
                         .into_response();
                 } else {
-                    return random_code.into_response();
+                    response_key =  random_code.to_string().clone();
                 }
             }
         } else {
@@ -161,7 +170,8 @@ async fn post_data(Json(payload): Json<Value>) -> impl IntoResponse {
     } else {
         println!("Payload is not valid");
     }
-    "Data received".into_response()
+    println!("Response key: {}", response_key);
+    response_key.into_response()
 }
 
 async fn handler() -> impl IntoResponse {
