@@ -9,6 +9,8 @@ use serde_json::{Value, json};
 use std::fs::File;
 use std::io::{Read, Write};
 use axum::extract::Json;
+use tower_http::cors::{Any, CorsLayer};
+use axum::http::{Method, header}; // ★ http::Methodではなくaxum::http::Methodを使う
 
 async fn redirect_url(axum::extract::Path(short_url): axum::extract::Path<String>) -> impl IntoResponse {
     // JSONファイルを読み込む
@@ -192,12 +194,18 @@ async fn handler() -> impl IntoResponse {
 }
 #[tokio::main]
 async fn main() {
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers([header::CONTENT_TYPE]);  // ★ http::headerではなくaxum::http::header
+
     let app = Router::new()
         .route("/:short_url", get(redirect_url))
         .route("/post", axum::routing::post(post_data))
-        .route("/post_server", get(handler));
+        .route("/post_server", get(handler))
+        .layer(cors);
 
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
+    axum::Server::bind(&"0.0.0.0:3030".parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
