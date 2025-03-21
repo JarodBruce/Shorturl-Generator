@@ -62,12 +62,6 @@ async fn redirect_url(axum::extract::Path(short_url): axum::extract::Path<String
 async fn post_data(Json(payload): Json<Value>) -> impl IntoResponse {
     let mut response_key = "Data in True".to_string();
     if let Value::Object(map) = &payload {
-        let url: Vec<String> = map.values()
-            .filter_map(|v| v.as_str())
-            .map(String::from)
-            .collect();
-        let keys: Vec<String> = map.keys().cloned().collect();
-
         if map.contains_key("long") {
 
             let mut rng = rand::thread_rng();
@@ -114,11 +108,6 @@ async fn post_data(Json(payload): Json<Value>) -> impl IntoResponse {
 
             let mut read_json = true;
             if let Value::Object(json_map) = &mut json_data {
-                let values: Vec<Vec<String>> = json_map
-                    .values()
-                    .filter_map(|v| v.as_array())
-                    .map(|arr| arr.iter().filter_map(|item| item.as_str().map(String::from)).collect())
-                    .collect();
                 // 同じデータが存在すれば書き込みをスキップし、キーを出力
                 if let Some(existing_key) = json_map.iter().find_map(|(key, value)| {
                     if value.as_array()
